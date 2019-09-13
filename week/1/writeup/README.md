@@ -1,4 +1,4 @@
-# Writeup 1 - Ethics
+# Writeup 0 - Ethics
 
 Name: Dalton Fowler
 Section: 0101
