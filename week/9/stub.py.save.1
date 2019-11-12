@@ -1,0 +1,106 @@
+#!/usr/bin/env python2
+
+import sys
+import struct
+from datetime import datetime
+
+# You can use this method to exit on failure conditions.
+def bork(msg):
+    sys.exit(msg)
+
+
+# Some constants. You shouldn't need to change these.
+MAGIC = 0x8BADF00D
+VERSION = 1
+
+if len(sys.argv) < 2:
+    sys.exit("Usage: python stub.py input_file.fpff")
+
+# Normally we'd parse a stream to save memory, but the FPFF files in this
+# assignment are relatively small.
+with open(sys.argv[1], 'rb') as fpff:
+    data = fpff.read()
+
+# Hint: struct.unpack will be VERY useful.
+# Hint: you might find it easier to use an index/offset variable than
+# hardcoding ranges like 0:8
+magic, version = struct.unpack("<LL", data[0:8])
+timestamp  = struct.unpack("<L", data[8:12])
+author = struct.unpack("<Q", data[12:20])
+sec_num = struct.unpack("<L",data[20:24])
+
+if magic != MAGIC:
+    bork("Bad magic! Got %s, expected %s" % (hex(magic), hex(MAGIC)))
+
+if version != VERSION:
+    bork("Bad version! Got %d, expected %d" % (int(version), int(VERSION)))
+
+if sec_num <= 0:
+    bork("Bad Section Number: Got %d, needs to be above 1" % int(sec_num))
+
+#Unpacking the timestamp and converting the time to a unix timestamp
+(x,) = timestamp
+time_conv = datetime.fromtimestamp(float(x))
+#Unpacking the section number from tuple
+(y,) = sec_num
+sec_num = y
+#Unpacking the author value from tuple, convert it to hex then from hex covert to ASCII. Then reverse the string since the hex was in little endian.
+(r,) = author
+temp = str(hex(r))
+author = rev
+
+#Necessary printing of Header Information
+print("------- HEADER -------")
+print("MAGIC: %s" % hex(magic))
+print("VERSION: %d" % int(version))
+print("TIMESTAMP: %s" % time_conv )
+print("Author: %s" % author)
+print("Section : %d" % int(y))
+
+def sec_type(i):
+	switcher={
+		1:'SECTION_ASCII',
+		2:'SECTION_UTF8',
+		3:'SECTION_WORDS',
+		4:'SECTION_DWORDS',
+		5:'SECTION_DOUBLES',
+		6:'SECTION_COORD',
+		7:'SECTION_REFERENCE',
+		8:'SECTION_PNG',
+		9:'SECTION_GIF87',
+		10:'SECTION_GIF89'
+  	    }
+	return switcher.get(i, "Invalid")
+
+#Necessart printing of body information
+print("-------  BODY  -------")
+start = 24
+end = 28
+for x in range(sec_num):
+	#Prints the section number
+	print("Section %d:" % int(int(x)+int(1)))
+	type = struct.unpack("<L",data[start:end])
+	(stype,) = type
+	len = struct.unpack("<L",data[(start+4):(end+4)])
+	(slen,) = len
+	#(Above) unpack and retreieve values for stype and slen then (below) print the values accordingly
+	print("\tSection Type: %s" % sec_type(stype))
+	print("\tSection Length: %d" % int(slen))
+	if len > 0:
+		svalue = 8 + slen
+		print("\tSection Value: %d" % int(svalue))
+
+	if (sec_type(stype) == sec_type(1)):
+		temp = slen/4
+		format = ("<" + ("L" * temp))
+		body = struct.unpack(format,data[(start+8):(end+4+int(slen))])
+		res = ""
+		for var in body:
+			res = res + str(hex(var))
+		print(body)
+		print(res)
+	
+	start = start + slen + 8
+	end = end + slen + 8
+	
+
